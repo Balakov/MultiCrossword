@@ -264,7 +264,7 @@
                 lastSelectedElement = element;
 
                 if (shouldFocus) {
-                    //element.focus();
+                    element.focus();
                 }
 
                 let selectedClueId;
@@ -391,7 +391,7 @@
                 //console.log("Check Victory");
 
                 // Don't check for victory if we have incorrect letters still on the board
-                if (document.querySelectorAll('[data-state="incorrect"]').length == 0) {
+                if (document.querySelectorAll('.incorrect-value').length == 0) {
 
                     //console.log("No incorrect");
 
