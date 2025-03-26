@@ -19,7 +19,7 @@ public class HomeController : Controller
     {
         return View(new IndexViewModel()
         {
-            RSSData = await CrosswordDownloader.DownloadCrosswordListsAsync(new[] { "cryptic", "quick", "speedy" })
+            RSSData = await CrosswordDownloader.DownloadCrosswordListsAsync(new[] { "quick", "speedy", "cryptic" })
         });
     }
 

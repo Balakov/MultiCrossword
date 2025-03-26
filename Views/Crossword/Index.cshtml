@@ -3,10 +3,19 @@
     ViewData["Title"] = "Crossword";
 }
 
+<header class="mb-4"></header>
+
 @if (Model.Data != null)
 {
     <div class="row">
         <div class="col-lg-6 col-md-12">
+
+            <div class="row mb-3">
+                <div class="col-12"><h4>@Model.Data.name</h4></div>
+            </div>
+
+            @await Html.PartialAsync("_InlineCluePartial")
+
             <div class="row">
                 <div class="col-12">
                     <div class="mb-3">
@@ -14,13 +23,67 @@
                     </div>
                 </div>
             </div>
-            <div class="row d-block d-lg-none" >
-                <div class="col-12">
-                    <div class="alert alert-secondary py-2 mb-3" id="current-clue-text"></div>
+
+            @await Html.PartialAsync("_InlineCluePartial")
+
+            <div class="row mt-3">
+                <div class="col-12 d-flex gap-1">
+                    <!-- Check Grid -->
+                    <div class="dropdown">
+                        <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            Check Grid
+                        </button>
+                         <div class="dropdown-menu">
+                            <a class="dropdown-item" href="#" id="check-grid-button">Check Grid</a>
+                            <a class="dropdown-item" href="#" id="clear-incorrect-button">Clear Incorrect Highlights</a>
+                        </div>
+                    </div>
+
+                    <!-- Reveal Letter -->
+                    <div class="dropdown">
+                        <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            Reveal Letter
+                        </button>
+                         <div class="dropdown-menu">
+                            <a class="dropdown-item" href="#" id="reveal-letter-button">Confirm</a>
+                        </div>
+                    </div>
+
+                    <!-- Reveal Word -->
+                    <div class="dropdown">
+                        <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            Reveal Clue
+                        </button>
+                        <div class="dropdown-menu">
+                            <a class="dropdown-item" href="#" id="reveal-word-button">Confirm</a>
+                        </div>
+                    </div>
+
+                    @if (Model.Debug)
+                    {
+                        <!-- Reveal/Clear Grid -->
+                        <div class="dropdown">
+                            <button class="btn btn-danger dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Reveal Grid
+                            </button>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="#" id="reveal-grid-button">Reveal Grid</a>
+                                <a class="dropdown-item" href="#" id="clear-grid-button">Clear Grid</a>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <a href="@Url.Action("Index", "Home")">&laquo; Back to crosswords</a>
+                </div>
+            </div>
+
         </div>
-        <div class="col-lg-6">
+
+        <div class="col-lg-6 d-none d-lg-block">
             <div class="row">
                 <div class="col-lg-6 col-md-12">
                     <div class="clue-type-header">
@@ -42,40 +105,6 @@
                         {
                             @await Html.PartialAsync("_CluePartial", clue)
                         }
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-12 d-flex gap-1">
-                    <!-- Reveal Letter -->
-                    <div class="dropdown">
-                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            Reveal Letter
-                        </button>
-                         <div class="dropdown-menu">
-                            <a class="dropdown-item" href="#" id="reveal-letter-button">Confirm</a>
-                        </div>
-                    </div>
-
-                    <!-- Reveal Word -->
-                    <div class="dropdown">
-                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            Reveal Clue
-                        </button>
-                        <div class="dropdown-menu">
-                            <a class="dropdown-item" href="#" id="reveal-word-button">Confirm</a>
-                        </div>
-                    </div>
-
-                    <!-- Reveal/Clear Grid -->
-                    <div class="dropdown">
-                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            Reveal Grid
-                        </button>
-                        <div class="dropdown-menu">
-                            <a class="dropdown-item" href="#" id="reveal-grid-button">Reveal Grid</a>
-                            <a class="dropdown-item" href="#" id="clear-grid-button">Clear Grid</a>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -110,13 +139,14 @@
             let lastSelectedElement;
             const currentPlayerId = "@(Model.PlayerId)";
             const currentGameId = "@(Model.GameId)";
+            const isDebug = @Model.Debug.ToString().ToLower();
 
             document.querySelectorAll('.grid-input').forEach(element => {
                 const x = element.dataset.x;
                 const y = element.dataset.y;
 
                 element.addEventListener('focus', function (event) {
-                    selectClue(x, y);
+                    selectClue(x, y, false);
                 });
 
                 element.addEventListener("mousedown", () => {
@@ -126,10 +156,10 @@
                         const clues = getClues(x,y);
                         if(currentSelectionDirection == 'across' && clues.downClueId) {
                             currentSelectionDirection = 'down';
-                            selectClue(x, y);
+                            selectClue(x, y, false);
                         } else if(currentSelectionDirection == 'down' && clues.acrossClueId) {
                             currentSelectionDirection = 'across';
-                            selectClue(x, y);
+                            selectClue(x, y, false);
                         }
                     }
                 });
@@ -178,7 +208,6 @@
                 //console.log("sendMove");
 
                 element.classList.remove('incorrect-value');
-                element.dataset.state = 'modified';
                 checkForVictory();
 
                 try {
@@ -224,12 +253,19 @@
                 document.querySelectorAll('.remote-selected-clue').forEach(element => {
                     element.classList.remove('remote-selected-clue');
                 });
+                document.querySelectorAll('.current-clue-text-container').forEach(clueTextContainerElement => {
+                    clueTextContainerElement.style.display = 'none';
+                });
             }
 
-            async function selectClue(x, y) {
+            async function selectClue(x, y, shouldFocus) {
                 const inputId = '#cell_' + x + '_' + y;
                 const element = document.querySelector(inputId);
                 lastSelectedElement = element;
+
+                if (shouldFocus) {
+                    //element.focus();
+                }
 
                 let selectedClueId;
 
@@ -267,8 +303,12 @@
 
                     // Populate the clue text at the top of the screen
                     const clueTextSourceElement = document.getElementById(selectedClueId + '_clue');
-                    const clueTextElement = document.getElementById('current-clue-text');
-                    clueTextElement.textContent = clueTextSourceElement.textContent;
+                    document.querySelectorAll('.current-clue-text').forEach(clueTextElement => {
+                        clueTextElement.textContent = clueTextSourceElement.textContent;
+                    });
+                    document.querySelectorAll('.current-clue-text-container').forEach(clueTextContainerElement => {
+                        clueTextContainerElement.style.display = 'block';
+                    });
 
                     try {
                         await connection.invoke("SelectClue", currentPlayerId, currentGameId, x, y, currentSelectionDirection);
@@ -382,7 +422,6 @@
                             //console.log("Some incorrect");
                             incorrectElements.forEach(element => {
                                 element.classList.add('incorrect-value');
-                                element.dataset.state = 'incorrect';
                             })
                         }
 
@@ -398,6 +437,36 @@
                 const minutes = Math.floor(sec / 60);
                 const remainingSeconds = sec % 60;
                 return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+            }
+
+            async function checkGrid(shouldSend) {
+                document.querySelectorAll('.grid-input').forEach(element => {
+                    if (element.value != element.dataset.solution) {
+                       element.classList.add('incorrect-value');
+                    }
+                });
+
+                if (shouldSend) {
+                    try {
+                        await connection.invoke("CheckGrid", currentPlayerId, currentGameId);
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
+            }
+
+            async function clearIncorrect(shouldSend) {
+                document.querySelectorAll('.grid-input').forEach(element => {
+                    element.classList.remove('incorrect-value');
+                });
+
+                if (shouldSend) {
+                    try {
+                        await connection.invoke("ClearIncorrect", currentPlayerId, currentGameId);
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
             }
 
             function revealLetter() {
@@ -454,6 +523,14 @@
                 deselectClues();
             }
 
+            document.getElementById('clear-incorrect-button').addEventListener('click', (event) => {
+                clearIncorrect(true);
+            });
+
+            document.getElementById('check-grid-button').addEventListener('click', (event) => {
+                checkGrid(true);
+            });
+
             document.getElementById('reveal-letter-button').addEventListener('click', (event) => {
                 revealLetter();
             });
@@ -462,18 +539,21 @@
                 revealWord();
             });
 
-            document.getElementById('reveal-grid-button').addEventListener('click', (event) => {
-                revealGrid(true);
-            });
+            if (isDebug) {
+                document.getElementById('reveal-grid-button').addEventListener('click', (event) => {
+                    revealGrid(true);
+                });
 
-            document.getElementById('clear-grid-button').addEventListener('click', (event) => {
-                clearGrid(true);
-            });
+                document.getElementById('clear-grid-button').addEventListener('click', (event) => {
+                    clearGrid(true);
+                });
+            }
 
             document.querySelectorAll('.clue-text-button').forEach(element => {
                 element.addEventListener('click', (event) => {
                     const anchor = event.target.closest("a");
-                    selectClue(anchor.dataset.cellStartX, anchor.dataset.cellStartY);
+                    currentSelectionDirection = anchor.dataset.direction;
+                    selectClue(anchor.dataset.cellStartX, anchor.dataset.cellStartY, true);
                 });
             });
 
@@ -500,8 +580,20 @@
                     const element = document.querySelector(inputId);
                     element.value = c;
                     element.classList.remove('incorrect-value');
-                    element.dataset.state = 'modified-remote';
                     checkForVictory();
+                }
+            });
+
+            connection.on("ReceiveCheckGrid", (id) => {
+                if (currentPlayerId != id) {
+                    checkGrid(false);
+                }
+            });
+
+            connection.on("ReceiveClearIncorrect", (id) => {
+                console.log("CI");
+                if (currentPlayerId != id) {
+                    clearIncorrect(false);
                 }
             });
 
@@ -529,4 +621,14 @@
 
 
     </script>
+}
+
+@section Styles 
+{
+<style>
+    a {
+        text-decoration: none;
+        color: #333;
+    }
+</style>
 }

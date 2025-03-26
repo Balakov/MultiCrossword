@@ -3,11 +3,12 @@
     ViewData["Title"] = "Home Page";
 }
 
+<header class="mb-4"></header>
+
 <div class="row">
     @foreach (var crosswordType in Model.RSSData.CrosswordTypes)
     {
-
-        <div class="col-lg-4">
+        <div class="col-lg-4 mb-2">
             <div class="card">
                 <div class="card-header">@string.Concat(crosswordType.Name[0].ToString().ToUpper(), crosswordType.Name.AsSpan(1))</div>
                 <div class="card-body">
@@ -15,7 +16,7 @@
                         <div class="input-group">
                             <input type="hidden" name="CrosswordType" value="@crosswordType.Name"/>
                             <input type="text" class="form-control" name="CrosswordNumber" placeholder="Custom Number" />
-                            <button class="btn btn-primary">Submit</button>
+                            <button class="btn btn-dark">Submit</button>
                         </div>
                     </form>
                 </div>
@@ -39,3 +40,21 @@
         </div>
     }
 </div>
+
+@section Styles
+{
+<style>
+    li a {
+        text-decoration: none;
+        color: #333;
+    }
+
+    li {
+        padding-bottom: 0.25rem;
+    }
+
+    ul {
+        list-style-type: none;
+    }
+</style>
+}

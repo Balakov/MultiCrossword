@@ -1,6 +1,6 @@
 ﻿@model Crossword.Models.CrosswordEntry
 
-<a href="javascript:void(0)" class="clue-text-button" data-cell-start-x="@Model.position.x" data-cell-start-y="@Model.position.y">
+<a href="javascript:void(0)" class="clue-text-button" data-cell-start-x="@Model.position.x" data-cell-start-y="@Model.position.y" data-direction="@Model.direction">
     <div tabindex="-1" class="clue-entry px-2" @($"data-{Model.direction}-clue-id={Model.id}")>
         <span class="clue-number">@Model.humanNumber</span>
         <span class="clue-text" id="@(Model.id)_clue" >@Model.clue</span>

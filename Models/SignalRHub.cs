@@ -60,5 +60,15 @@ namespace Crossword.Models
             await m_boardStorageService.CompleteBoard(gameId);
             await Clients.Group(gameId).SendAsync("ReceiveRevealGrid", playerId);
         }
+
+        public async Task CheckGrid(string playerId, string gameId)
+        {
+            await Clients.Group(gameId).SendAsync("ReceiveCheckGrid", playerId);
+        }
+
+        public async Task ClearIncorrect(string playerId, string gameId)
+        {
+            await Clients.Group(gameId).SendAsync("ReceiveClearIncorrect", playerId);
+        }
     }
 }

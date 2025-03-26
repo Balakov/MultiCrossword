@@ -20,6 +20,7 @@ namespace Crossword.Controllers
             public BoardCell[,] CellArray { get; set; }
             public string PlayerId { get; set; }
             public string GameId { get; set; }
+            public bool Debug { get; set; }
         }
 
         private static string GetNextCellId(int currentX, int currentY, string word, int indexAlongWord, string direction)
@@ -57,11 +58,12 @@ namespace Crossword.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(string url)
+        public async Task<IActionResult> Index(string url, bool debug = false)
         {
             IndexViewModel vm = new IndexViewModel()
             {
-                PlayerId = m_random.Next().ToString()
+                PlayerId = m_random.Next().ToString(),
+                Debug = debug
             };
 
             // See if we have cached this board locally

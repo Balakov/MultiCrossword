@@ -9,13 +9,6 @@
 <g data-x="@Model.X" data-y="@Model.Y" id="grid_@(Model.X)_@(Model.Y)" tabindex="-1">
     <rect x="@pixelX" y="@pixelY" width="32" height="32" class="grid-cell"></rect>
 
-    @if (Model.Number > 0)
-    {
-        <text>
-            <text x="@pixelX" y="@pixelY" dx="1.6" dy="9" class="grid-text">@Model.Number</text>
-        </text>
-    }
-
     <foreignObject x="@pixelX" y="@pixelY" width="32" height="32">
         <input value=@Model.Value
                autocapitalize="none"
@@ -38,6 +31,12 @@
                id="cell_@(Model.X)_@(Model.Y)" />
     </foreignObject>
 
+    @if (Model.Number > 0)
+    {
+        <text>
+            <text x="@pixelX" y="@pixelY" dx="1.6" dy="9" class="grid-text">@Model.Number</text>
+        </text>
+    }
 </g>
 
 <g>
