@@ -1,0 +1,23 @@
+﻿@model Crossword.Models.BoardCell[,]
+
+@{
+    int cols = Model.GetLength(0);
+    int rows = Model.GetLength(1);
+    int pixelWidth = cols * 33 + 1;
+    int pixelHeight = rows * 33 + 1;
+}
+
+<div style="max-width:@(pixelWidth)px; max-height:@(pixelHeight)px">
+    <svg viewBox="0 0 @pixelWidth @pixelHeight" tabindex="-1" class="grid">
+        @for (int y = 0; y < rows; y++)
+        {
+            for (int x = 0; x < cols; x++)
+            {
+                @if (Model[x, y] != null)
+                {
+                    @await Html.PartialAsync("_BoardSquare", Model[x, y]);
+                }
+            }
+        }
+    </svg>
+</div>

@@ -1,0 +1,119 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+
+
+.grid {
+    background: #121212;
+    position: relative;
+    cursor: pointer;
+    width: 100%;
+}
+
+.grid-cell {
+    fill: white;
+}
+
+.grid-text {
+    font-family: "Helvetica Neue",Helvetica,Arial,"Lucida Grande",sans-serif;
+    font-size: 0.75rem;
+    line-height: 1.3;
+    font-weight: 400;
+    font-style: normal;
+    --source-text-decoration-thickness: 2px;
+    font-size: 9px;
+}
+
+.grid-input {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    color: #121212;
+    border: none;
+    font-family: "Helvetica Neue",Helvetica,Arial,"Lucida Grande",sans-serif;
+    font-size: 0.75rem;
+    line-height: 1.3;
+    font-weight: 400;
+    font-style: normal;
+    --source-text-decoration-thickness: 2px;
+    font-size: 19.2px;
+    text-align: center;
+}
+
+.grid-cell-separator {
+    fill: #121212;
+}
+
+.clue-type-header {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    font-style: normal;
+    --source-text-decoration-thickness: 2px;
+    border-top: 1px solid #121212;
+    border-bottom: 1px dotted #121212;
+    margin-bottom: 0.5em;
+    text-transform: capitalize;
+}
+
+.clue-entry {
+    background-color: transparent;
+    opacity: 1;
+    padding: 0.3em 0;
+    color: #121212;
+}
+
+.clue-number {
+    font-weight: bold;
+    display: table-cell;
+    width: 1.25em;
+    padding-right: 0.625em;
+}
+
+.clue-text {
+    display: table-cell;
+}
+
+.incorrect-value {
+    background: rgb(255, 80, 0);
+}
+
+.selected-clue {
+    background: rgb(255, 229, 0);
+}
+
+.selected-clue.incorrect-value,
+.remote-selected-clue.incorrect-value,
+.selected-clue.remote-selected-clue.incorrect-value {
+    background: rgb(255, 128, 0);
+}
+
+.remote-selected-clue {
+    background: rgb(200, 229, 255);
+}
+
+.selected-clue.remote-selected-clue {
+    background: rgb(255, 128, 255);
+}
+
+a.clue-text-button {
+    text-decoration: none;
+}

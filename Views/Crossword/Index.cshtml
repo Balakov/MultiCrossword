@@ -1,0 +1,532 @@
+﻿@model Crossword.Controllers.CrosswordController.IndexViewModel
+@{
+    ViewData["Title"] = "Crossword";
+}
+
+@if (Model.Data != null)
+{
+    <div class="row">
+        <div class="col-lg-6 col-md-12">
+            <div class="row">
+                <div class="col-12">
+                    <div class="mb-3">
+                        @await Html.PartialAsync("_BoardPartial", Model.CellArray)
+                    </div>
+                </div>
+            </div>
+            <div class="row d-block d-lg-none" >
+                <div class="col-12">
+                    <div class="alert alert-secondary py-2 mb-3" id="current-clue-text"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="row">
+                <div class="col-lg-6 col-md-12">
+                    <div class="clue-type-header">
+                        <label>across</label>
+                    </div>
+                    <div tabindex="0" class="mb-3">
+                        @foreach (var clue in Model.Data.entries.Where(x => x.direction == "across"))
+                        {
+                            @await Html.PartialAsync("_CluePartial", clue)
+                        }
+                    </div>
+                </div>
+                <div class="col-lg-6 col-md-12">
+                    <div class="clue-type-header">
+                        <label>down</label>
+                    </div>
+                    <div tabindex="0" class="mb-3">
+                        @foreach (var clue in Model.Data.entries.Where(x => x.direction == "down"))
+                        {
+                            @await Html.PartialAsync("_CluePartial", clue)
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 d-flex gap-1">
+                    <!-- Reveal Letter -->
+                    <div class="dropdown">
+                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            Reveal Letter
+                        </button>
+                         <div class="dropdown-menu">
+                            <a class="dropdown-item" href="#" id="reveal-letter-button">Confirm</a>
+                        </div>
+                    </div>
+
+                    <!-- Reveal Word -->
+                    <div class="dropdown">
+                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            Reveal Clue
+                        </button>
+                        <div class="dropdown-menu">
+                            <a class="dropdown-item" href="#" id="reveal-word-button">Confirm</a>
+                        </div>
+                    </div>
+
+                    <!-- Reveal/Clear Grid -->
+                    <div class="dropdown">
+                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            Reveal Grid
+                        </button>
+                        <div class="dropdown-menu">
+                            <a class="dropdown-item" href="#" id="reveal-grid-button">Reveal Grid</a>
+                            <a class="dropdown-item" href="#" id="clear-grid-button">Clear Grid</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="modal fade" tabindex="-1" id="win-modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header justify-content-center">
+                <h5 class="modal-title">Congratulations!</h5>
+            </div>
+            <div class="modal-body text-center">
+                <p>Completed in <span id="timer">00:00</span></p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts
+{
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.js"></script>
+    <script>
+
+        window.addEventListener('load', (event) => {
+
+            let currentSelectionDirection = 'across';
+            let lastSelectedElement;
+            const currentPlayerId = "@(Model.PlayerId)";
+            const currentGameId = "@(Model.GameId)";
+
+            document.querySelectorAll('.grid-input').forEach(element => {
+                const x = element.dataset.x;
+                const y = element.dataset.y;
+
+                element.addEventListener('focus', function (event) {
+                    selectClue(x, y);
+                });
+
+                element.addEventListener("mousedown", () => {
+                    if (document.activeElement === element) {
+                        // Repeated click on focused input. If this cell has both across and down clues
+                        // intersecting we'll swap direction
+                        const clues = getClues(x,y);
+                        if(currentSelectionDirection == 'across' && clues.downClueId) {
+                            currentSelectionDirection = 'down';
+                            selectClue(x, y);
+                        } else if(currentSelectionDirection == 'down' && clues.acrossClueId) {
+                            currentSelectionDirection = 'across';
+                            selectClue(x, y);
+                        }
+                    }
+                });
+
+                element.addEventListener("keydown", (event) => {
+                    if (event.key === "Delete" ||
+                        event.key === "Backspace") {
+                        event.stopPropagation();
+                        event.preventDefault();
+                        deleteLetter(x, y);
+                    } else if (event.key === "ArrowUp") {
+                        moveTo(x, y, 'prev', 'down');
+                    } else if (event.key === "ArrowDown") {
+                        moveTo(x, y, 'next', 'down');
+                    } else if (event.key === "ArrowLeft") {
+                        moveTo(x, y, 'prev', 'across');
+                    } else if (event.key === "ArrowRight") {
+                        moveTo(x, y, 'next', 'across');
+                    }
+                });
+
+                element.addEventListener('input', function (event) {
+                    if(event.data) {
+                        addLetter(x, y, event.data);
+                    }
+                });
+            });
+
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/gameActionsHub?gameId=" + currentGameId)
+                .configureLogging(signalR.LogLevel.Information)
+                .build();
+
+            async function start() {
+                try {
+                    await connection.start();
+                    console.log("SignalR Connected.");
+                } catch (err) {
+                    console.log(err);
+                    setTimeout(start, 5000);
+                }
+            };
+
+            async function sendMove(x, y, c, element) {
+
+                //console.log("sendMove");
+
+                element.classList.remove('incorrect-value');
+                element.dataset.state = 'modified';
+                checkForVictory();
+
+                try {
+                    await connection.invoke("SendMove", currentPlayerId, currentGameId, x, y, c);
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+
+            function addLetter(x, y, c) {
+                c = c.toUpperCase();
+                const inputId = '#cell_' + x + '_' + y;
+                const element = document.querySelector(inputId);
+                element.value = c;
+                sendMove(x, y, c, element);
+                moveTo(x, y, 'next', currentSelectionDirection);
+            }
+
+            function deleteLetter(x, y) {
+                const inputId = '#cell_' + x + '_' + y;
+                const element = document.querySelector(inputId);
+                element.value = '';
+                sendMove(x, y, '', element);
+                moveTo(x, y, 'prev', currentSelectionDirection);
+            }
+
+            function getClues(x, y) {
+                const inputId = '#cell_' + x + '_' + y;
+                const element = document.querySelector(inputId);
+                return {
+                    acrossClueId: element.dataset.acrossClueId,
+                    downClueId: element.dataset.downClueId
+                };
+            }
+
+            async function deselectClues() {
+                lastSelectedElement = null;
+
+                // Clear the previous selection
+                document.querySelectorAll('.selected-clue').forEach(element => {
+                    element.classList.remove('selected-clue');
+                });
+                document.querySelectorAll('.remote-selected-clue').forEach(element => {
+                    element.classList.remove('remote-selected-clue');
+                });
+            }
+
+            async function selectClue(x, y) {
+                const inputId = '#cell_' + x + '_' + y;
+                const element = document.querySelector(inputId);
+                lastSelectedElement = element;
+
+                let selectedClueId;
+
+                if (currentSelectionDirection == 'across') {
+                    if (element.dataset.acrossClueId) {
+                        selectedClueId = element.dataset.acrossClueId;
+                    } else {
+                        selectedClueId = element.dataset.downClueId;
+                        currentSelectionDirection = 'down';  // switch direction
+                    }
+                } else {
+                    if (element.dataset.downClueId) {
+                        selectedClueId = element.dataset.downClueId;
+                    } else {
+                        selectedClueId = element.dataset.acrossClueId;
+                        currentSelectionDirection = 'across'; // switch direction
+                    }
+                }
+
+                if (selectedClueId) {
+                    // Clear the previous selection
+                    document.querySelectorAll('[data-across-clue-id]').forEach(element => {
+                        element.classList.remove('selected-clue');
+                    });
+                    document.querySelectorAll('[data-down-clue-id]').forEach(element => {
+                        element.classList.remove('selected-clue');
+                    });
+
+                    document.querySelectorAll('[data-across-clue-id="' + selectedClueId + '"]').forEach(element => {
+                        element.classList.add('selected-clue');
+                    });
+                    document.querySelectorAll('[data-down-clue-id="' + selectedClueId + '"]').forEach(element => {
+                        element.classList.add('selected-clue');
+                    });
+
+                    // Populate the clue text at the top of the screen
+                    const clueTextSourceElement = document.getElementById(selectedClueId + '_clue');
+                    const clueTextElement = document.getElementById('current-clue-text');
+                    clueTextElement.textContent = clueTextSourceElement.textContent;
+
+                    try {
+                        await connection.invoke("SelectClue", currentPlayerId, currentGameId, x, y, currentSelectionDirection);
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
+            }
+
+            async function showRemoteClueSelection(x, y, direction) {
+                const inputId = '#cell_' + x + '_' + y;
+                const element = document.querySelector(inputId);
+                let selectedClueId;
+
+                if (direction == 'across') {
+                    if (element.dataset.acrossClueId) {
+                        selectedClueId = element.dataset.acrossClueId;
+                    }
+                } else if (direction == 'down') {
+                    if (element.dataset.downClueId) {
+                        selectedClueId = element.dataset.downClueId;
+                    }
+                }
+
+                if (selectedClueId) {
+                    // Clear the previous selection
+                    document.querySelectorAll('[data-across-clue-id]').forEach(element => {
+                        element.classList.remove('remote-selected-clue');
+                    });
+                    document.querySelectorAll('[data-down-clue-id]').forEach(element => {
+                        element.classList.remove('remote-selected-clue');
+                    });
+
+                    document.querySelectorAll('[data-across-clue-id="' + selectedClueId + '"]').forEach(element => {
+                        element.classList.add('remote-selected-clue');
+                    });
+                    document.querySelectorAll('[data-down-clue-id="' + selectedClueId + '"]').forEach(element => {
+                        element.classList.add('remote-selected-clue');
+                    });
+                }
+            }
+
+            function moveTo(x, y, type, direction) {
+                const inputId = '#cell_' + x + '_' + y;
+                const element = document.querySelector(inputId);
+                let newElement;
+
+                if (direction == 'across') {
+                    if (type == 'next') {
+                        if (element.dataset.acrossNextCellId) {
+                            newElement = document.querySelector(element.dataset.acrossNextCellId);
+                        }
+                    } else if (type == 'prev') {
+                        if (element.dataset.acrossPrevCellId) {
+                            newElement = document.querySelector(element.dataset.acrossPrevCellId);
+                        }
+                    }
+                } else if (direction == 'down') {
+                    if (type == 'next') {
+                        if (element.dataset.downNextCellId) {
+                            newElement = document.querySelector(element.dataset.downNextCellId);
+                        }
+                    } else if (type == 'prev') {
+                        if (element.dataset.downPrevCellId) {
+                            newElement = document.querySelector(element.dataset.downPrevCellId);
+                        }
+                    }
+                }
+
+                if (newElement) {
+                    newElement.focus();
+                }
+            }
+
+            function checkForVictory() {
+                let allCorrect = true;
+                let allHaveValue = true;
+                let incorrectElements = [];
+
+                //console.log("Check Victory");
+
+                // Don't check for victory if we have incorrect letters still on the board
+                if (document.querySelectorAll('[data-state="incorrect"]').length == 0) {
+
+                    //console.log("No incorrect");
+
+                    document.querySelectorAll('.grid-input').forEach(element => {
+                        if(element.value != element.dataset.solution) {
+                            allCorrect = false;
+                            incorrectElements.push(element);
+                        }
+                    
+                        if (!element.value) {
+                            allHaveValue = false;
+                        }
+                    });
+
+                    if (allHaveValue) {
+                        //console.log("All have value");
+                        if (allCorrect) {
+
+                            //console.log("You win!");
+                            timerEnabled = false;
+
+                            const timerElement = document.getElementById("timer");
+                            timerElement.textContent = formatTime(seconds);
+
+                            const winModal = new bootstrap.Modal(document.getElementById('win-modal'));
+                            winModal.show();
+                        } else {
+                            //console.log("Some incorrect");
+                            incorrectElements.forEach(element => {
+                                element.classList.add('incorrect-value');
+                                element.dataset.state = 'incorrect';
+                            })
+                        }
+
+                        deselectClues();
+
+                    } else {
+                        //console.log("Not all have value");
+                    }
+                }
+            }
+
+            function formatTime(sec) {
+                const minutes = Math.floor(sec / 60);
+                const remainingSeconds = sec % 60;
+                return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+            }
+
+            function revealLetter() {
+                // Find the input with focus
+                if (lastSelectedElement) {
+                    const x = lastSelectedElement.dataset.x;
+                    const y = lastSelectedElement.dataset.y;
+                    const c = lastSelectedElement.dataset.solution;
+                    addLetter(x, y, c);
+                } else {
+                    console.log("No selection");
+                }
+            }
+
+            function revealWord() {
+                // Find all selected inputs and reveal the letters
+                document.querySelectorAll(".grid-input.selected-clue").forEach(element => {
+                    const x = element.dataset.x;
+                    const y = element.dataset.y;
+                    const c = element.dataset.solution;
+                    addLetter(x, y, c);
+                });
+            }
+
+            async function revealGrid(shouldSend) {
+                document.querySelectorAll('.grid-input').forEach(element => {
+                    element.value = element.dataset.solution;
+                    element.classList.remove('incorrect-value');
+                });
+
+                if (shouldSend) {
+                    try {
+                        await connection.invoke("RevealGrid", currentPlayerId, currentGameId);
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
+            }
+
+            async function clearGrid(shouldSend) {
+                document.querySelectorAll('.grid-input').forEach(element => {
+                    element.value = '';
+                    element.classList.remove('incorrect-value');
+                });
+
+                if (shouldSend) {
+                    try {
+                        await connection.invoke("ClearGrid", currentPlayerId, currentGameId);
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
+
+                deselectClues();
+            }
+
+            document.getElementById('reveal-letter-button').addEventListener('click', (event) => {
+                revealLetter();
+            });
+
+            document.getElementById('reveal-word-button').addEventListener('click', (event) => {
+                revealWord();
+            });
+
+            document.getElementById('reveal-grid-button').addEventListener('click', (event) => {
+                revealGrid(true);
+            });
+
+            document.getElementById('clear-grid-button').addEventListener('click', (event) => {
+                clearGrid(true);
+            });
+
+            document.querySelectorAll('.clue-text-button').forEach(element => {
+                element.addEventListener('click', (event) => {
+                    const anchor = event.target.closest("a");
+                    selectClue(anchor.dataset.cellStartX, anchor.dataset.cellStartY);
+                });
+            });
+
+            // Set up the timer
+            let seconds = 0;
+            let timerEnabled = true;
+
+            setInterval(() => {
+                if (timerEnabled) {
+                    seconds++;
+                }
+            }, 1000);
+
+            // Set up SignalR
+
+            connection.onclose(async () => {
+                await start();
+            });
+
+            connection.on("ReceiveMove", (id, x, y, c) => {
+                if (currentPlayerId != id) {
+                    //console.log("Remote Move " + "x:" + x + " y:" + y + " c:" + c);
+                    const inputId = '#cell_' + x + '_' + y;
+                    const element = document.querySelector(inputId);
+                    element.value = c;
+                    element.classList.remove('incorrect-value');
+                    element.dataset.state = 'modified-remote';
+                    checkForVictory();
+                }
+            });
+
+            connection.on("ReceiveRemoteSelect", (id, x, y, direction) => {
+                if (currentPlayerId != id) {
+                    showRemoteClueSelection(x, y, direction);
+                }
+            });
+
+            connection.on("ReceiveClearGrid", (id) => {
+                if (currentPlayerId != id) {
+                    clearGrid(false);
+                }
+            });
+
+            connection.on("ReceiveRevealGrid", (id) => {
+                if (currentPlayerId != id) {
+                    revealGrid(false);
+                }
+            });
+
+            // Start SignalR the connection.
+            start();
+        });
+
+
+    </script>
+}

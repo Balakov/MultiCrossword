@@ -1,0 +1,53 @@
+﻿@model Crossword.Models.BoardCell
+@{
+    Model.ClueIdByDirection.TryGetValue("across", out Crossword.Models.Navigation acrossNav);
+    Model.ClueIdByDirection.TryGetValue("down", out Crossword.Models.Navigation downNav);
+    int pixelX = Model.X * 33 + 1;
+    int pixelY = Model.Y * 33 + 1;
+}
+    
+<g data-x="@Model.X" data-y="@Model.Y" id="grid_@(Model.X)_@(Model.Y)" tabindex="-1">
+    <rect x="@pixelX" y="@pixelY" width="32" height="32" class="grid-cell"></rect>
+
+    @if (Model.Number > 0)
+    {
+        <text>
+            <text x="@pixelX" y="@pixelY" dx="1.6" dy="9" class="grid-text">@Model.Number</text>
+        </text>
+    }
+
+    <foreignObject x="@pixelX" y="@pixelY" width="32" height="32">
+        <input value=@Model.Value
+               autocapitalize="none"
+               type="text"
+               pattern="^[A-Za-zÀ-ÿ0-9]$"
+               autocomplete="off"
+               spellcheck="false"
+               autocorrect="off"
+               class="grid-input"
+               data-x="@Model.X"
+               data-y="@Model.Y"
+               data-across-clue-id ="@acrossNav?.ClueId"
+               data-across-next-cell-id="@acrossNav?.NextCellId"
+               data-across-prev-cell-id="@acrossNav?.PreviousCellId"
+               data-down-clue-id ="@downNav?.ClueId"
+               data-down-next-cell-id="@downNav?.NextCellId"
+               data-down-prev-cell-id="@downNav?.PreviousCellId"
+               data-solution="@Model.Solution"
+               data-state="untouched"
+               id="cell_@(Model.X)_@(Model.Y)" />
+    </foreignObject>
+
+</g>
+
+<g>
+@if (acrossNav?.HasSeparator ?? false)
+{
+    <rect x="@(pixelX + 30)" y="@pixelY" width="2" height="32" class="grid-cell-separator"></rect>
+}
+
+@if (downNav?.HasSeparator ?? false)
+{
+    <rect x="@pixelX" y="@(pixelY + 30)" width="32" height="2" class="grid-cell-separator"></rect>
+}
+</g>

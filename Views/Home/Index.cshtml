@@ -1,0 +1,41 @@
+﻿@model Crossword.Controllers.HomeController.IndexViewModel
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="row">
+    @foreach (var crosswordType in Model.RSSData.CrosswordTypes)
+    {
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">@string.Concat(crosswordType.Name[0].ToString().ToUpper(), crosswordType.Name.AsSpan(1))</div>
+                <div class="card-body">
+                    <form method="post" action="@Url.Action("CustomCrossword")" class="mb-2">
+                        <div class="input-group">
+                            <input type="hidden" name="CrosswordType" value="@crosswordType.Name"/>
+                            <input type="text" class="form-control" name="CrosswordNumber" placeholder="Custom Number" />
+                            <button class="btn btn-primary">Submit</button>
+                        </div>
+                    </form>
+                </div>
+
+                @if (!string.IsNullOrEmpty(crosswordType.Error))
+                {
+                    <div class="alert alert-danger">
+                        @crosswordType.Error
+                    </div>
+                }
+                else
+                {
+                    <ul>
+                        @foreach (var crossword in crosswordType.Crosswords)
+                        {
+                            <li><a href="@Url.Action("Index", "Crossword", new { url = crossword.Link })">@crossword.Title</a></li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    }
+</div>
