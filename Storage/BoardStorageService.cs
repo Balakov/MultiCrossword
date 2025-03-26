@@ -12,6 +12,7 @@ namespace Crossword.Storage
 
         public Dictionary<string, CellData> Cells { get; set; } = new();
 
+        public static RedisKey GameCompletionTime(string gameId) => $"crossword_complete_time_{gameId}";
         public static RedisKey GameStateKey(string gameId) => $"crossword_state_{gameId}";
         public static RedisKey GameCompleteKey(string gameId) => $"crossword_state_complete_{gameId}";
         public static string CellId(string x, string y) => $"cell_{x}_{y}";
@@ -86,6 +87,24 @@ namespace Crossword.Storage
             {
                 await SetBoardStateAsync(gameId, completedBoard);
             }
+        }
+
+        public async Task RegisterComplete(string gameId, int seconds)
+        {
+            var db = m_redis.GetDatabase();
+            await db.StringSetAsync(BoardStorage.GameCompletionTime(gameId), seconds.ToString());
+        }
+
+        public async Task<int> GetCompletionTime(string gameId)
+        {
+            var db = m_redis.GetDatabase();
+            string secondsString = await db.StringGetAsync(BoardStorage.GameCompletionTime(gameId));
+            if (int.TryParse(secondsString, out int seconds))
+            {
+                return seconds;
+            }
+
+            return 0;
         }
     }
 }

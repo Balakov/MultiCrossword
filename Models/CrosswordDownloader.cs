@@ -29,10 +29,11 @@ namespace Crossword.Models
                 int start = htmlContent.IndexOf("<gu-island name=\"CrosswordComponent\"");
                 if (start != -1)
                 {
-                    int end = htmlContent.IndexOf(">", start + 1);
-                    string content = htmlContent.Substring(start, (end - start) + 1);
+                    int end = htmlContent.IndexOf("><", start + 1);
+                    string content = htmlContent.Substring(start, (end - start));
+                    content = content.Replace(">", "&lt;");
 
-                    string docContent = "<root>" + content + "</gu-island></root>";
+                    string docContent = "<root>" + content + "></gu-island></root>";
 
                     XDocument doc = XDocument.Load(new StringReader(docContent));
 

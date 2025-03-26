@@ -70,5 +70,10 @@ namespace Crossword.Models
         {
             await Clients.Group(gameId).SendAsync("ReceiveClearIncorrect", playerId);
         }
+
+        public async Task RegisterComplete(string gameId, int seconds)
+        {
+            await m_boardStorageService.RegisterComplete(gameId, seconds);
+        }
     }
 }

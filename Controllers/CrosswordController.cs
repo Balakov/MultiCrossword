@@ -20,6 +20,7 @@ namespace Crossword.Controllers
             public BoardCell[,] CellArray { get; set; }
             public string PlayerId { get; set; }
             public string GameId { get; set; }
+            public int CompletionTimeInSeconds { get; set; }
             public bool Debug { get; set; }
         }
 
@@ -96,6 +97,8 @@ namespace Crossword.Controllers
                         completedState = new Storage.BoardStorage();
                     }
                 }
+
+                vm.CompletionTimeInSeconds = await m_boardStorageService.GetCompletionTime(vm.GameId);
 
                 var existingBoard = await m_boardStorageService.GetBoardStateAsync(vm.GameId);
 

@@ -11,7 +11,14 @@
         <div class="col-lg-6 col-md-12">
 
             <div class="row mb-3">
-                <div class="col-12"><h4>@Model.Data.name</h4></div>
+                <div class="col-12">
+                    <h4>@Model.Data.name</h4>
+                    @if(Model.CompletionTimeInSeconds > 0)
+                    {
+                        TimeSpan timeSpan = TimeSpan.FromSeconds(Model.CompletionTimeInSeconds);
+                        <span class="text-muted">Completed in @($"{timeSpan.Minutes:00}:{timeSpan.Seconds:00}")</span>
+                    }
+                </div>
             </div>
 
             @await Html.PartialAsync("_InlineCluePartial")
@@ -208,7 +215,7 @@
                 //console.log("sendMove");
 
                 element.classList.remove('incorrect-value');
-                checkForVictory();
+                await checkForVictory(true);
 
                 try {
                     await connection.invoke("SendMove", currentPlayerId, currentGameId, x, y, c);
@@ -383,7 +390,7 @@
                 }
             }
 
-            function checkForVictory() {
+            async function checkForVictory(wasSender) {
                 let allCorrect = true;
                 let allHaveValue = true;
                 let incorrectElements = [];
@@ -418,10 +425,20 @@
 
                             const winModal = new bootstrap.Modal(document.getElementById('win-modal'));
                             winModal.show();
+
+                            if (wasSender) {
+                               try {
+                                   await connection.invoke("RegisterComplete", currentGameId, seconds);
+                               } catch (err) {
+                                   console.error(err);
+                               }
+                            }
+
                         } else {
                             //console.log("Some incorrect");
                             incorrectElements.forEach(element => {
                                 element.classList.add('incorrect-value');
+                                element.value = '';
                             })
                         }
 
@@ -443,6 +460,7 @@
                 document.querySelectorAll('.grid-input').forEach(element => {
                     if (element.value != element.dataset.solution) {
                        element.classList.add('incorrect-value');
+                       element.value = '';
                     }
                 });
 
@@ -580,7 +598,7 @@
                     const element = document.querySelector(inputId);
                     element.value = c;
                     element.classList.remove('incorrect-value');
-                    checkForVictory();
+                    checkForVictory(false);
                 }
             });
 
@@ -617,6 +635,9 @@
 
             // Start SignalR the connection.
             start();
+
+            // Hide iOS address bar
+            window.scrollTo(0,1)
         });
 
 
