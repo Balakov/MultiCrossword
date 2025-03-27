@@ -13,7 +13,7 @@
             <div class="row mb-3">
                 <div class="col-12">
                     <h4>@Model.Data.name</h4>
-                    @if(Model.CompletionTimeInSeconds > 0)
+                    @if (Model.CompletionTimeInSeconds > 0)
                     {
                         TimeSpan timeSpan = TimeSpan.FromSeconds(Model.CompletionTimeInSeconds);
                         <small class="text-muted">Completed on @Model.CompletionDate.ToString("ddd dd MMM") in @($"{timeSpan.Minutes:00}m{timeSpan.Seconds:00}s")</small>
@@ -42,7 +42,6 @@
                         </button>
                          <div class="dropdown-menu">
                             <a class="dropdown-item" href="#" id="check-grid-button">Check Grid</a>
-                            <a class="dropdown-item" href="#" id="clear-incorrect-button">Clear Incorrect Highlights</a>
                         </div>
                     </div>
 
@@ -147,6 +146,7 @@
             const currentPlayerId = "@(Model.PlayerId)";
             const currentGameId = "@(Model.GameId)";
             const isDebug = @Model.Debug.ToString().ToLower();
+            const wasPreviouslyCompleted = @(Model.CompletionTimeInSeconds > 0 ? "true" : "false");
 
             document.querySelectorAll('.grid-input').forEach(element => {
                 const x = element.dataset.x;
@@ -212,16 +212,13 @@
 
             async function sendMove(x, y, c, element) {
 
-                //console.log("sendMove");
-
-                element.classList.remove('incorrect-value');
-                await checkForVictory(true);
-
                 try {
                     await connection.invoke("SendMove", currentPlayerId, currentGameId, x, y, c);
                 } catch (err) {
                     console.error(err);
                 }
+
+                await checkForVictory(true);
             }
 
             function addLetter(x, y, c) {
@@ -393,59 +390,33 @@
             async function checkForVictory(wasSender) {
                 let allCorrect = true;
                 let allHaveValue = true;
-                let incorrectElements = [];
 
-                //console.log("Check Victory");
+                document.querySelectorAll('.grid-input').forEach(element => {
+                    if (!element.value) {
+                        allHaveValue = false;
+                    }
+                    if(element.value != element.dataset.solution) {
+                        allCorrect = false;
+                        incorrectElements.push(element);
+                    }
+                });
 
-                // Don't check for victory if we have incorrect letters still on the board
-                if (document.querySelectorAll('.incorrect-value').length == 0) {
+                if (allHaveValue && allCorrect) {
+                    //console.log("You win!");
+                    timerEnabled = false;
 
-                    //console.log("No incorrect");
+                    const timerElement = document.getElementById("timer");
+                    timerElement.textContent = formatTime(seconds);
 
-                    document.querySelectorAll('.grid-input').forEach(element => {
-                        if(element.value != element.dataset.solution) {
-                            allCorrect = false;
-                            incorrectElements.push(element);
+                    const winModal = new bootstrap.Modal(document.getElementById('win-modal'));
+                    winModal.show();
+
+                    if (!wasPreviouslyCompleted && wasSender) {
+                        try {
+                            await connection.invoke("RegisterComplete", currentGameId, seconds);
+                        } catch (err) {
+                            console.error(err);
                         }
-                    
-                        if (!element.value) {
-                            allHaveValue = false;
-                        }
-                    });
-
-                    if (allHaveValue) {
-                        //console.log("All have value");
-                        if (allCorrect) {
-
-                            //console.log("You win!");
-                            timerEnabled = false;
-
-                            const timerElement = document.getElementById("timer");
-                            timerElement.textContent = formatTime(seconds);
-
-                            const winModal = new bootstrap.Modal(document.getElementById('win-modal'));
-                            winModal.show();
-
-                            if (wasSender) {
-                               try {
-                                   await connection.invoke("RegisterComplete", currentGameId, seconds);
-                               } catch (err) {
-                                   console.error(err);
-                               }
-                            }
-
-                        } else {
-                            //console.log("Some incorrect");
-                            incorrectElements.forEach(element => {
-                                element.classList.add('incorrect-value');
-                                element.value = '';
-                            })
-                        }
-
-                        deselectClues();
-
-                    } else {
-                        //console.log("Not all have value");
                     }
                 }
             }
@@ -459,7 +430,6 @@
             async function checkGrid(shouldSend) {
                 document.querySelectorAll('.grid-input').forEach(element => {
                     if (element.value != element.dataset.solution) {
-                       element.classList.add('incorrect-value');
                        element.value = '';
                     }
                 });
@@ -467,20 +437,6 @@
                 if (shouldSend) {
                     try {
                         await connection.invoke("CheckGrid", currentPlayerId, currentGameId);
-                    } catch (err) {
-                        console.error(err);
-                    }
-                }
-            }
-
-            async function clearIncorrect(shouldSend) {
-                document.querySelectorAll('.grid-input').forEach(element => {
-                    element.classList.remove('incorrect-value');
-                });
-
-                if (shouldSend) {
-                    try {
-                        await connection.invoke("ClearIncorrect", currentPlayerId, currentGameId);
                     } catch (err) {
                         console.error(err);
                     }
@@ -512,7 +468,6 @@
             async function revealGrid(shouldSend) {
                 document.querySelectorAll('.grid-input').forEach(element => {
                     element.value = element.dataset.solution;
-                    element.classList.remove('incorrect-value');
                 });
 
                 if (shouldSend) {
@@ -527,7 +482,6 @@
             async function clearGrid(shouldSend) {
                 document.querySelectorAll('.grid-input').forEach(element => {
                     element.value = '';
-                    element.classList.remove('incorrect-value');
                 });
 
                 if (shouldSend) {
@@ -540,10 +494,6 @@
 
                 deselectClues();
             }
-
-            document.getElementById('clear-incorrect-button').addEventListener('click', (event) => {
-                clearIncorrect(true);
-            });
 
             document.getElementById('check-grid-button').addEventListener('click', (event) => {
                 checkGrid(true);
@@ -597,7 +547,6 @@
                     const inputId = '#cell_' + x + '_' + y;
                     const element = document.querySelector(inputId);
                     element.value = c;
-                    element.classList.remove('incorrect-value');
                     checkForVictory(false);
                 }
             });
@@ -605,13 +554,6 @@
             connection.on("ReceiveCheckGrid", (id) => {
                 if (currentPlayerId != id) {
                     checkGrid(false);
-                }
-            });
-
-            connection.on("ReceiveClearIncorrect", (id) => {
-                console.log("CI");
-                if (currentPlayerId != id) {
-                    clearIncorrect(false);
                 }
             });
 
