@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.FileProviders;
+
 namespace Crossword
 {
     public class Program
@@ -22,7 +25,14 @@ namespace Crossword
             {
                 app.UseExceptionHandler("/Home/Error");
             }
-            app.UseStaticFiles();
+
+            var provider = new FileExtensionContentTypeProvider();
+            provider.Mappings[".riv"] = "application/octet-stream";
+
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                ContentTypeProvider = provider
+            });
 
             app.UseRouting();
 

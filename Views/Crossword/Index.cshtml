@@ -9,7 +9,6 @@
 {
     <div class="row">
         <div class="col-lg-6 col-md-12">
-
             <div class="row mb-3">
                 <div class="col-12">
                     <h4>@Model.Data.name</h4>
@@ -126,9 +125,12 @@
             </div>
             <div class="modal-body text-center">
                 <p>Completed in <span id="timer">00:00</span></p>
+                <div id="canvas-container" style="height: 200px">
+                    <canvas id="canvas" width="500" height="500" style="width: 100%; height: 100%;"></canvas>
+                </div>
             </div>
             <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-warning" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -137,6 +139,7 @@
 @section Scripts
 {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.js"></script>
+    <script src="https://unpkg.com/@@rive-app/canvas"></script>
     <script>
 
         window.addEventListener('load', (event) => {
@@ -147,6 +150,8 @@
             const currentGameId = "@(Model.GameId)";
             const isDebug = @Model.Debug.ToString().ToLower();
             const wasPreviouslyCompleted = @(Model.CompletionTimeInSeconds > 0 ? "true" : "false");
+            let wasCompletedOnThisPlay = false;
+            const winModal = new bootstrap.Modal(document.getElementById('win-modal'));
 
             document.querySelectorAll('.grid-input').forEach(element => {
                 const x = element.dataset.x;
@@ -388,6 +393,11 @@
             }
 
             async function checkForVictory(wasSender) {
+
+                if (wasCompletedOnThisPlay) {
+                    return;
+                }
+
                 let allCorrect = true;
                 let allHaveValue = true;
 
@@ -404,11 +414,11 @@
                 if (allHaveValue && allCorrect) {
                     //console.log("You win!");
                     timerEnabled = false;
+                    wasCompletedOnThisPlay = true;
 
                     const timerElement = document.getElementById("timer");
                     timerElement.textContent = formatTime(seconds);
 
-                    const winModal = new bootstrap.Modal(document.getElementById('win-modal'));
                     winModal.show();
 
                     if (!wasPreviouslyCompleted && wasSender) {
@@ -579,7 +589,29 @@
             start();
 
             // Hide iOS address bar
-            window.scrollTo(0,1)
+            window.scrollTo(0,1);
+
+            // Win animation
+            const r = new rive.Rive({
+              src: "@Url.Content("~/static/win.riv")",
+              canvas: document.getElementById("canvas"),
+              autoplay: false,
+              // artboard: "Arboard", // Optional. If not supplied the default is selected
+              stateMachines: "State Machine 1",
+              onLoad: () => {
+                // Ensure the drawing surface matches the canvas size and device pixel ratio
+                r.resizeDrawingSurfaceToCanvas();
+              },
+            });
+
+            const con = document.getElementById("canvas-container");
+            con.addEventListener("resize", () => {
+                r.resizeDrawingSurfaceToCanvas();
+            }, false);
+
+            document.getElementById('win-modal').addEventListener('shown.bs.modal', function () {
+                r.play("State Machine 1");
+            })
         });
 
 
