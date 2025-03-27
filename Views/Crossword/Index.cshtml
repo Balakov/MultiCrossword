@@ -16,7 +16,7 @@
                     @if(Model.CompletionTimeInSeconds > 0)
                     {
                         TimeSpan timeSpan = TimeSpan.FromSeconds(Model.CompletionTimeInSeconds);
-                        <span class="text-muted">Completed in @($"{timeSpan.Minutes:00}:{timeSpan.Seconds:00}")</span>
+                        <small class="text-muted">Completed on @Model.CompletionDate.ToString("ddd dd MMM") in @($"{timeSpan.Minutes:00}m{timeSpan.Seconds:00}s")</small>
                     }
                 </div>
             </div>
@@ -84,7 +84,7 @@
 
             <div class="row mt-4">
                 <div class="col-12">
-                    <a href="@Url.Action("Index", "Home")">&laquo; Back to crosswords</a>
+                    <a href="@Url.Action("Index", "Home", new { debug = Model.Debug })">&laquo; Back to crosswords</a>
                 </div>
             </div>
 
@@ -453,7 +453,7 @@
             function formatTime(sec) {
                 const minutes = Math.floor(sec / 60);
                 const remainingSeconds = sec % 60;
-                return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+                return `${String(minutes).padStart(2, "0")}m${String(remainingSeconds).padStart(2, "0")}s`;
             }
 
             async function checkGrid(shouldSend) {

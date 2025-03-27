@@ -32,7 +32,20 @@
                     <ul>
                         @foreach (var crossword in crosswordType.Crosswords)
                         {
-                            <li><a href="@Url.Action("Index", "Crossword", new { url = crossword.Link })">@crossword.Title</a></li>
+                            <li>
+                                <div class="d-flex align-items-center">
+                                    @if (crossword.CompletionTimeInSeconds > 0)
+                                    {
+                                        <i class="bi bi-check-square me-2"></i>
+                                    }
+                                    <a href="@Url.Action("Index", "Crossword", new { url = crossword.Link, debug = Model.Debug })">@crossword.Title</a>
+                                </div>
+                                @if (crossword.CompletionTimeInSeconds > 0)
+                                {
+                                    TimeSpan completionTime = TimeSpan.FromSeconds(crossword.CompletionTimeInSeconds);
+                                    <div class="ms-3"><small class="text-muted">Completed on @crossword.CompletionDate.ToString("ddd dd MMM") in @($"{completionTime.Minutes:00}m{completionTime.Seconds:00}s")</small></div>
+                                }
+                            </li>
                         }
                     </ul>
                 }
@@ -45,7 +58,6 @@
 {
 <style>
     li a {
-        text-decoration: none;
         color: #333;
     }
 

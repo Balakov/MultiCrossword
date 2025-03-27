@@ -33,7 +33,7 @@ namespace Crossword.Models
 
                             foreach (var move in game.Value)
                             {
-                                string cellId = Storage.BoardStorage.CellId(move.CellX, move.CellY);
+                                string cellId = Storage.BoardStorage.CellIdKey(move.CellX, move.CellY);
 
                                 if (string.IsNullOrEmpty(move.Value))
                                 {

@@ -20,6 +20,7 @@ namespace Crossword.Controllers
             public BoardCell[,] CellArray { get; set; }
             public string PlayerId { get; set; }
             public string GameId { get; set; }
+            public DateTime CompletionDate { get; set; }
             public int CompletionTimeInSeconds { get; set; }
             public bool Debug { get; set; }
         }
@@ -38,7 +39,7 @@ namespace Crossword.Controllers
                 }
             }
 
-            return $"#cell_{currentX}_{currentY}";
+            return "#" + Storage.BoardStorage.CellIdKey(currentX, currentY);
         }
 
         private static string GetPreviousCellId(int currentX, int currentY, string word, int indexAlongWord, string direction)
@@ -55,7 +56,7 @@ namespace Crossword.Controllers
                 }
             }
 
-            return $"#cell_{currentX}_{currentY}";
+            return "#" + Storage.BoardStorage.CellIdKey(currentX, currentY);
         }
 
         [HttpGet]
@@ -85,7 +86,7 @@ namespace Crossword.Controllers
             if (gameJSON != null)
             {
                 vm.Data = JsonSerializer.Deserialize<CrosswordJson>(gameJSON)?.data;
-                vm.GameId = $"{vm.Data.crosswordType}_{vm.Data.number}";
+                vm.GameId = Storage.BoardStorage.GameIdKey(vm.Data.crosswordType, vm.Data.number.ToString());
 
                 if(completedState == null)
                 {
@@ -98,7 +99,12 @@ namespace Crossword.Controllers
                     }
                 }
 
-                vm.CompletionTimeInSeconds = await m_boardStorageService.GetCompletionTime(vm.GameId);
+                Storage.BoardStorageService.CrosswordCompletionInfo completionInfo = await m_boardStorageService.GetCompletionTime(vm.GameId);
+                if (completionInfo != null)
+                {
+                    vm.CompletionTimeInSeconds = completionInfo.Seconds;
+                    vm.CompletionDate = completionInfo.Date;
+                }
 
                 var existingBoard = await m_boardStorageService.GetBoardStateAsync(vm.GameId);
 
@@ -121,7 +127,7 @@ namespace Crossword.Controllers
 
                         if (vm.CellArray[x, y] == null)
                         {
-                            existingBoard.Cells.TryGetValue(Storage.BoardStorage.CellId(x, y), out var cellValue);
+                            existingBoard.Cells.TryGetValue(Storage.BoardStorage.CellIdKey(x, y), out var cellValue);
 
                             vm.CellArray[x, y] = new BoardCell()
                             {
@@ -146,7 +152,7 @@ namespace Crossword.Controllers
 
                             if (completedState != null)
                             {
-                                completedState.Cells.Add(Storage.BoardStorage.CellId(x, y), new Storage.BoardStorage.CellData() { Value = vm.CellArray[x, y].Solution });
+                                completedState.Cells.Add(Storage.BoardStorage.CellIdKey(x, y), new Storage.BoardStorage.CellData() { Value = vm.CellArray[x, y].Solution });
                             }
                         }
                         else

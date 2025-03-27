@@ -67,6 +67,9 @@ namespace Crossword.Models
             public string Title { get; set; }
             public string Link { get; set; }
             public string Date { get; set; }
+            public string CrosswordNumber { get; set; }
+            public int CompletionTimeInSeconds { get; set; }
+            public DateTime CompletionDate { get; set; }
         }
 
         public static async Task<AvailableCrosswords> DownloadCrosswordListsAsync(string[] crosswordTypeNames)
@@ -112,11 +115,16 @@ namespace Crossword.Models
                             !string.IsNullOrEmpty(link) &&
                             string.Equals(category, "crosswords", StringComparison.InvariantCultureIgnoreCase))
                         {
+                            // Number is the last part of the URL - E.g., https://www.theguardian.com/crosswords/cryptic/29653
+                            link = link.TrimEnd('/');
+                            string number = link.Split('/').LastOrDefault();
+
                             crosswords.Add(new CrosswordLink()
                             {
                                 Title = title,
                                 Link = link,
-                                Date = pubDate
+                                Date = pubDate,
+                                CrosswordNumber = number
                             });
                         }
                     }
