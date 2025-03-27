@@ -1,0 +1,13 @@
+[Unit]
+Description=Guardian Crossword Service
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/crossword
+ExecStart=/home/pi/.dotnet/dotnet /home/pi/crossword/Crossword.dll
+Restart=always
+Capability=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target

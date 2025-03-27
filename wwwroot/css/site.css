@@ -51,14 +51,15 @@ h1, h2, h3, h4, h5, h6 {
     height: 100%;
     background: transparent;
     color: #121212;
-    border: none;
     font-family: "Helvetica Neue",Helvetica,Arial,"Lucida Grande",sans-serif;
     line-height: 1.3;
     font-weight: 400;
     font-style: normal;
-    --source-text-decoration-thickness: 2px;
     font-size: 18px;
     text-align: center;
+    border: none;
+    border-radius: 0;
+    padding: 0;
 }
 
 .grid-cell-separator {
